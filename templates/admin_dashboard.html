@@ -1,0 +1,23 @@
+<h2>Admin Dashboard</h2>
+
+<table border="1">
+    <tr>
+        <th>Roll No</th>
+        <th>Subject</th>
+        <th>Date</th>
+        <th>Status</th>
+    </tr>
+
+    {% for record in records %}
+    <tr>
+        <td>{{ record.rollno }}</td>
+        <td>{{ record.subject }}</td>
+        <td>{{ record.date }}</td>
+        <td>{{ record.status }}</td>
+    </tr>
+    {% endfor %}
+
+</table>
+
+<br>
+<a href="/admin_logout">Logout</a>

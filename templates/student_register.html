@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Register</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="container">
+    <h2>Student Registration</h2>
+
+    <form method="POST" action="/register">
+
+        <input type="text" name="name" placeholder="Full Name" required>
+        <input type="text" name="rollno" placeholder="Roll Number" required>
+        <input type="email" name="parent_email" placeholder="Parent Email" required>
+        <input type="password" name="password" placeholder="Password" required>
+
+        <br><br>
+
+        <video id="video" width="300" autoplay></video>
+        <br>
+        <button type="button" onclick="capture()">Capture Face</button>
+
+        <input type="hidden" name="image" id="imageData">
+
+        <br><br>
+        <button type="submit">Register</button>
+
+    </form>
+
+    <br>
+    <a href="/">Back</a>
+</div>
+
+<script src="/static/camera.js"></script>
+
+<script>
+function capture(){
+    document.getElementById("imageData").value = captureImage();
+    alert("Image Captured Successfully");
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Attendance Report</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="container">
+
+<h2>Your Attendance Report</h2>
+
+{% if records %}
+<table border="1">
+<tr>
+    <th>Subject</th>
+    <th>Date</th>
+    <th>Status</th>
+</tr>
+
+{% for r in records %}
+<tr>
+    <td>{{ r.subject }}</td>
+    <td>{{ r.date }}</td>
+    <td>{{ r.status }}</td>
+</tr>
+{% endfor %}
+
+</table>
+{% else %}
+<p>No attendance records found.</p>
+{% endif %}
+
+<br>
+<a href="/student_dashboard">Back</a>
+
+</div>
+
+</body>
+</html>
