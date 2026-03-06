@@ -9,3 +9,5 @@ geopy==2.4.1
 bcrypt==4.1.2
 yagmail==0.15.293
 gunicorn==21.2.0
+setuptools
+wheel
