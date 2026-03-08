@@ -37,9 +37,6 @@ admins = db["admins"]
 cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 face_cascade = cv2.CascadeClassifier(cascade_path)
 
-if face_cascade.empty():
-    raise Exception("Failed to load Haar Cascade")
-
 # ==============================
 # COLLEGE LOCATION
 # ==============================
@@ -70,10 +67,10 @@ def check_shortage(student):
             email_pass = os.getenv("EMAIL_PASS")
 
             if not email_user or not email_pass:
-                print("Email credentials not set")
                 return
 
             try:
+
                 yag = yagmail.SMTP(email_user, email_pass)
 
                 yag.send(
@@ -81,6 +78,7 @@ def check_shortage(student):
                     subject="Attendance Shortage Alert",
                     contents=f"""
 Your ward {student['name']} attendance is below 75%.
+
 Current Attendance: {percent:.2f}%
 """
                 )
@@ -152,7 +150,6 @@ def admin_logout():
 
 @app.route("/student_register_page")
 def student_register_page():
-
     return render_template("student_register.html")
 
 # ==============================
@@ -207,7 +204,6 @@ def register():
 
 @app.route("/student_login_page")
 def student_login_page():
-
     return render_template("student_login.html")
 
 # ==============================
@@ -242,26 +238,22 @@ def student_dashboard():
     return render_template("student_dashboard.html")
 
 # ==============================
-# STUDENT REPORT
+# ATTENDANCE PAGE
 # ==============================
 
-@app.route("/student_report")
-def student_report():
+@app.route("/student_record")
+def student_record():
 
     if "student" not in session:
         return redirect("/student_login_page")
 
-    rollno = session["student"]
-
-    records = list(attendance.find({"rollno": rollno}))
-
-    return render_template("student_report.html", records=records)
+    return render_template("student_record.html")
 
 # ==============================
 # MARK ATTENDANCE
 # ==============================
 
-@app.route("/mark_attendance", methods=["GET","POST"])
+@app.route("/mark_attendance", methods=["POST"])
 def mark_attendance():
 
     if "student" not in session:
@@ -270,10 +262,8 @@ def mark_attendance():
     rollno = session["student"]
 
     subject = request.form["subject"]
-
     latitude = float(request.form["latitude"])
     longitude = float(request.form["longitude"])
-
     image_data = request.form["image"]
 
     student = students.find_one({"rollno": rollno})
@@ -284,9 +274,7 @@ def mark_attendance():
     image_data = image_data.split(",")[1]
 
     image_bytes = base64.b64decode(image_data)
-
     image = Image.open(io.BytesIO(image_bytes))
-
     image_np = np.array(image)
 
     gray = cv2.cvtColor(image_np, cv2.COLOR_BGR2GRAY)
@@ -300,7 +288,6 @@ def mark_attendance():
         (x, y, w, h) = faces[0]
 
         face = gray[y:y+h, x:x+w]
-
         face = cv2.resize(face, (200, 200))
 
         saved_face = np.array(student["face"], dtype=np.uint8)
@@ -327,6 +314,22 @@ def mark_attendance():
     check_shortage(student)
 
     return redirect("/student_dashboard")
+
+# ==============================
+# STUDENT REPORT
+# ==============================
+
+@app.route("/student_report")
+def student_report():
+
+    if "student" not in session:
+        return redirect("/student_login_page")
+
+    rollno = session["student"]
+
+    records = list(attendance.find({"rollno": rollno}))
+
+    return render_template("student_report.html", records=records)
 
 # ==============================
 # LOGOUT
