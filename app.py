@@ -15,10 +15,15 @@ app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "fallbacksecretkey")
 
 # ==============================
-# DATABASE (CLOUD - ENV VARIABLE)
+# DATABASE
 # ==============================
 
-client = pymongo.MongoClient(os.getenv("MONGO_URI"))
+mongo_uri = os.getenv("MONGO_URI")
+
+if not mongo_uri:
+    raise ValueError("MONGO_URI environment variable not set")
+
+client = pymongo.MongoClient(mongo_uri)
 db = client["attendance_db"]
 
 students = db["students"]
@@ -29,9 +34,11 @@ admins = db["admins"]
 # FACE CASCADE
 # ==============================
 
-face_cascade = cv2.CascadeClassifier(
-    cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-)
+cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+face_cascade = cv2.CascadeClassifier(cascade_path)
+
+if face_cascade.empty():
+    raise Exception("Failed to load Haar Cascade")
 
 # ==============================
 # COLLEGE LOCATION
@@ -45,28 +52,39 @@ ALLOWED_RADIUS = 50
 # ==============================
 
 def check_shortage(student):
+
     total = attendance.count_documents({"rollno": student["rollno"]})
+
     present = attendance.count_documents({
         "rollno": student["rollno"],
         "status": "Present"
     })
 
     if total > 0:
+
         percent = (present / total) * 100
+
         if percent < 75:
+
+            email_user = os.getenv("EMAIL_USER")
+            email_pass = os.getenv("EMAIL_PASS")
+
+            if not email_user or not email_pass:
+                print("Email credentials not set")
+                return
+
             try:
-                yag = yagmail.SMTP(
-                    os.getenv("EMAIL_USER"),
-                    os.getenv("EMAIL_PASS")
-                )
+                yag = yagmail.SMTP(email_user, email_pass)
+
                 yag.send(
                     to=student["parent_email"],
                     subject="Attendance Shortage Alert",
                     contents=f"""
 Your ward {student['name']} attendance is below 75%.
-Current: {percent:.2f}%
+Current Attendance: {percent:.2f}%
 """
                 )
+
             except Exception as e:
                 print("Email failed:", e)
 
@@ -92,10 +110,12 @@ def admin_login_page():
 
 @app.route("/admin_login", methods=["POST"])
 def admin_login():
+
     username = request.form["username"]
     password = request.form["password"]
 
     if username == "admin" and password == "admin123":
+
         session["admin"] = username
         return redirect("/admin_dashboard")
 
@@ -107,11 +127,13 @@ def admin_login():
 
 @app.route("/admin_dashboard")
 def admin_dashboard():
+
     if "admin" not in session:
         return redirect("/admin_login_page")
 
-    all_attendance = attendance.find()
-    return render_template("admin_dashboard.html", records=all_attendance)
+    records = attendance.find()
+
+    return render_template("admin_dashboard.html", records=records)
 
 # ==============================
 # ADMIN LOGOUT
@@ -119,7 +141,9 @@ def admin_dashboard():
 
 @app.route("/admin_logout")
 def admin_logout():
+
     session.pop("admin", None)
+
     return redirect("/admin_login_page")
 
 # ==============================
@@ -128,6 +152,7 @@ def admin_logout():
 
 @app.route("/student_register_page")
 def student_register_page():
+
     return render_template("student_register.html")
 
 # ==============================
@@ -136,6 +161,7 @@ def student_register_page():
 
 @app.route("/register", methods=["POST"])
 def register():
+
     name = request.form["name"]
     rollno = request.form["rollno"]
     parent_email = request.form["parent_email"]
@@ -149,8 +175,10 @@ def register():
 
     image_data = image_data.split(",")[1]
     image_bytes = base64.b64decode(image_data)
+
     image = Image.open(io.BytesIO(image_bytes))
     image_np = np.array(image)
+
     gray = cv2.cvtColor(image_np, cv2.COLOR_BGR2GRAY)
 
     faces = face_cascade.detectMultiScale(gray, 1.3, 5)
@@ -159,6 +187,7 @@ def register():
         return "No Face Detected"
 
     (x, y, w, h) = faces[0]
+
     face = gray[y:y+h, x:x+w]
     face = cv2.resize(face, (200, 200))
 
@@ -178,6 +207,7 @@ def register():
 
 @app.route("/student_login_page")
 def student_login_page():
+
     return render_template("student_login.html")
 
 # ==============================
@@ -186,12 +216,14 @@ def student_login_page():
 
 @app.route("/student_login", methods=["POST"])
 def student_login():
+
     rollno = request.form["rollno"]
     password = request.form["password"]
 
     student = students.find_one({"rollno": rollno})
 
     if student and bcrypt.checkpw(password.encode(), student["password"]):
+
         session["student"] = rollno
         return redirect("/student_dashboard")
 
@@ -203,8 +235,10 @@ def student_login():
 
 @app.route("/student_dashboard")
 def student_dashboard():
+
     if "student" not in session:
         return redirect("/student_login_page")
+
     return render_template("student_dashboard.html")
 
 # ==============================
@@ -213,11 +247,14 @@ def student_dashboard():
 
 @app.route("/student_report")
 def student_report():
+
     if "student" not in session:
         return redirect("/student_login_page")
 
     rollno = session["student"]
+
     records = list(attendance.find({"rollno": rollno}))
+
     return render_template("student_report.html", records=records)
 
 # ==============================
@@ -226,21 +263,32 @@ def student_report():
 
 @app.route("/mark_attendance", methods=["POST"])
 def mark_attendance():
+
     if "student" not in session:
         return redirect("/student_login_page")
 
     rollno = session["student"]
+
     subject = request.form["subject"]
+
     latitude = float(request.form["latitude"])
     longitude = float(request.form["longitude"])
+
     image_data = request.form["image"]
 
     student = students.find_one({"rollno": rollno})
 
+    if not student:
+        return "Student not found"
+
     image_data = image_data.split(",")[1]
+
     image_bytes = base64.b64decode(image_data)
+
     image = Image.open(io.BytesIO(image_bytes))
+
     image_np = np.array(image)
+
     gray = cv2.cvtColor(image_np, cv2.COLOR_BGR2GRAY)
 
     faces = face_cascade.detectMultiScale(gray, 1.3, 5)
@@ -248,11 +296,15 @@ def mark_attendance():
     status = "Absent"
 
     if len(faces) > 0:
+
         (x, y, w, h) = faces[0]
+
         face = gray[y:y+h, x:x+w]
+
         face = cv2.resize(face, (200, 200))
 
         saved_face = np.array(student["face"], dtype=np.uint8)
+
         diff = np.mean(cv2.absdiff(face, saved_face))
 
         distance = geodesic(
@@ -264,10 +316,12 @@ def mark_attendance():
             status = "Present"
 
     attendance.insert_one({
+
         "rollno": rollno,
         "subject": subject,
         "date": datetime.now().strftime("%Y-%m-%d"),
         "status": status
+
     })
 
     check_shortage(student)
@@ -280,12 +334,15 @@ def mark_attendance():
 
 @app.route("/logout")
 def logout():
+
     session.clear()
+
     return redirect("/")
 
 # ==============================
-# RUN (CLOUD READY)
+# RUN SERVER
 # ==============================
 
 if __name__ == "__main__":
+
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
