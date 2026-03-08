@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Attendance Recording</title>
+</head>
+<body>
+
+<h2>Mark Attendance</h2>
+
+<form method="POST" action="/mark_attendance">
+
+    <label>Select Subject:</label>
+    <select name="subject" required>
+        <option value="">-- Select --</option>
+        <option value="Maths">Maths</option>
+        <option value="Physics">Physics</option>
+        <option value="Chemistry">Chemistry</option>
+    </select>
+
+    <br><br>
+
+    <!-- Camera -->
+    <video id="video" width="300" autoplay></video>
+    <br>
+    <button type="button" onclick="capture()">Capture</button>
+
+    <!-- Hidden Fields -->
+    <input type="hidden" name="image" id="imageData">
+    <input type="hidden" name="latitude" id="latitude">
+    <input type="hidden" name="longitude" id="longitude">
+
+    <br><br>
+    <button type="submit">Mark Attendance</button>
+
+</form>
+
+<br>
+<a href="/student_dashboard">Back</a>
+
+<!-- Camera Script -->
+<script src="/static/camera.js"></script>
+
+<script>
+function capture(){
+
+    navigator.geolocation.getCurrentPosition(
+        function(position){
+
+            // Save location
+            document.getElementById("latitude").value = position.coords.latitude;
+            document.getElementById("longitude").value = position.coords.longitude;
+
+            // Capture image
+            document.getElementById("imageData").value = captureImage();
+
+            alert("Image & Location Captured Successfully");
+
+        },
+        function(error){
+            alert("Please allow camera and location access.");
+        }
+    );
+
+}
+</script>
+
+</body>
+</html>

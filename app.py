@@ -261,7 +261,7 @@ def student_report():
 # MARK ATTENDANCE
 # ==============================
 
-@app.route("/mark_attendance", methods=["POST"])
+@app.route("/mark_attendance", methods=["GET","POST"])
 def mark_attendance():
 
     if "student" not in session:
